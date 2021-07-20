@@ -49,7 +49,59 @@ Y ahora debe aparecer el servicio http
 > Pregunta 3 : encuentra una forma de filtrar el servicio cockpit por ip, por seguridad
   
 `sudo firewall-cmd --permanent --zone=public --add-service=cockpit --add-source=<ip-address>/32 && sudo firewall-cmd --reload`
-  
+
+## SELINUX
+SELINUX o Security Enchanced Linux añade una capa extra de seguridad en nuestro servidor. Por defecto viene instalado en todos los CentOS configurado en enforcing pero la mayoria de gente a la que tiene un problema lo desactiva.
+
+Es mejor hacer una regla para ello, no desactivar todas las protecciones. En cockpit podremos ver las alarmas SELINUX.
+
+Más info en -> https://es.wikipedia.org/wiki/SELinux
+
+Hagamos una prueba
+```
+yum remove httpd
+yum install nginx
+systemctl enable --now nginx
+```
+
+Abre de nuevo un navegador y visita la ip de la máquina. Si ha funcionado deberemos ver el welcome page de nginx.
+
+Ahora edita el archivo `/etc/nginx/nginx.conf` y en el scope de server, modifica el location /:
+```
+        location / {
+          proxy_pass http://www.wordpress.com/;
+          proxy_redirect off;
+          proxy_buffering off;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "Keep-Alive";
+          proxy_set_header Proxy-Connection "Keep-Alive";
+        }
+```
+
+Ahora probamos que la config está OK y reiniciamos:
+```
+nginx -t
+service nginx reload
+```
+Prueba de nuevo a visitar la página web. Que ha ocurrido?
+
+Abrimos el log de error de nginx y probamos a visitar de nuevo la página. Para más cómodidad podemos usar por ejemplo curl o wget para ayudarnos en el debug.
+```
+tail -f /var/log/nginx/error.log
+wget -O/dev/null http://172.16.73.180/
+
+```
+Si estamos en un sistema con SELINUX y nos da un problema de permisos, es habitual que SELINUX esté bloqueando algo.
+ 
+> Pregunta 4 : Parece que la capa de protección extra SELINUX está haciendo de las suyas. Abre el log con un tail -f para observar los cambios. Recarga la página en el navegador y encuentra el mensaje de error. A continuación busca una forma de solucionar el problema.
+
+`tail -f /var/log/audit/audit.log /var/log/nginx/error.log`
+
+## Filtro IP con firewalld
+> Pregunta 5 : Busca una forma de proteger adecuadamente el acceso con ssh, permitiendo sólo el tráfico desde nuestra IP.
+
+
+
 ## Ejercicio 2
 
 Raid 1 en servidor remoto ya instalado
