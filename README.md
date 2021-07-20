@@ -5,7 +5,7 @@ Decargar e instalar CentOS en virtualbox
 http://ftp.rz.uni-frankfurt.de/pub/mirrors/centos/8.3.2011/isos/x86_64/CentOS-8.3.2011-x86_64-minimal.iso
 Como he escogido la red NAT hay que crear un port forwarding en virtualbox para poder conectar a host desde ssh.
 Instalación mínima.
-Crear usuario root y esanz y passs enrique
+Crear usuario root y esanz
 Quitar DHCP
 Particiones todas en ext4 
 - /boot 1GB
@@ -85,11 +85,13 @@ service nginx reload
 ```
 Prueba de nuevo a visitar la página web. Que ha ocurrido?
 
+nginx error!
+The page you are looking for is temporarily unavailable. Please try again later.
+
 Abrimos el log de error de nginx y probamos a visitar de nuevo la página. Para más cómodidad podemos usar por ejemplo curl o wget para ayudarnos en el debug.
 ```
 tail -f /var/log/nginx/error.log
-wget -O/dev/null http://172.16.73.180/
-
+2021/07/20 09:51:26 [crit] 30037#0: *9 connect() to 192.0.78.13:80 failed (13: Permission denied) while connecting to upstream, client: 10.0.2.2, server: _, request: "GET / HTTP/1.1", upstream: "http://192.0.78.13:80/", host: "localhost:2280"
 ```
 Si estamos en un sistema con SELINUX y nos da un problema de permisos, es habitual que SELINUX esté bloqueando algo.
  
@@ -97,10 +99,21 @@ Si estamos en un sistema con SELINUX y nos da un problema de permisos, es habitu
 
 `tail -f /var/log/audit/audit.log /var/log/nginx/error.log`
 
+Hay que permitir las conexiones del servicio httpd par que puedan usar la red
+
+`setsebool -P httpd_can_network_connect 1`
+
 ## Filtro IP con firewalld
 > Pregunta 5 : Busca una forma de proteger adecuadamente el acceso con ssh, permitiendo sólo el tráfico desde nuestra IP.
 
-
+Editamos `/etc/ssh/sshd_config` y habilitamos nuestra IP 
+```
+ListenAddress 192.0.78.13
+```
+Reiniciamos ssh y habilitamos las IP tables:
+```
+iptables -A INPUT -p tcp  -i enp0s3 --dport 22 -j ACCEPT
+```
 
 ## Ejercicio 2
 
